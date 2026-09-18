@@ -2,10 +2,21 @@
 
 const { spawnSync } = require("node:child_process");
 
-const result = spawnSync("python3", ["-m", "unittest", "-v", "service_contract"], { stdio: "inherit" });
-if (result.error) {
-  console.error(result.error.message);
-  process.exit(1);
+function run(args) {
+  return spawnSync("python3", args, { stdio: "inherit" });
 }
-process.exit(result.status ?? 1);
 
+// 1) 自动发现全部 test_*.py；2) 保留并运行既有健康检查契约 service_contract.py。
+const commands = [
+  ["-m", "unittest", "discover", "-p", "test_*.py", "-v"],
+  ["-m", "unittest", "-v", "service_contract"],
+];
+
+for (const args of commands) {
+  const result = run(args);
+  if (result.error) {
+    console.error(result.error.message);
+    process.exit(1);
+  }
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
